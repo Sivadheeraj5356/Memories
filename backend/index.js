@@ -202,5 +202,26 @@ app.put('/edit-note/:noteId', authenticationToken , async(req,res)=>{
 
     }
 })
+
+app.get('/get-all-notes', authenticationToken , async (req, res)=>{
+    const user = req.user.user
+    try{
+       const notes = await Note.find({ userId : user._id}).sort({
+        isPinned : -1
+       })
+       return res.json({
+        error : false,
+        notes,
+        message : " all notes successfully sent"
+       })
+    }catch(error){
+        return res.status(500).json({
+            error : true,
+            message :"Internal server error",
+            details : error.message
+        })
+
+    }
+})
 app.listen(3000)
 module.exports = app
