@@ -98,7 +98,7 @@ app.post('/login', async(req,res)=>{
 if(userInfo.email == email && userInfo.password === password){
     const user = { user : userInfo}
     const accesstoken = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET,{
-        expiresIn :"36000m"
+        expiresIn :"3600m"
     })
     return res.json({
         user,
@@ -222,6 +222,34 @@ app.get('/get-all-notes', authenticationToken , async (req, res)=>{
         })
 
     }
+})
+
+app.delete('/delete-note/:noteId' , authenticationToken , async(req,res)=>{
+    const noteId = req.params.noteId
+    const  user  = req.user.user
+     try{
+       const note =  await Note.findOne({_id : noteId , userId: user._id })
+       if(!note){
+         return res.status(404).json({
+            error : true,
+            message : "Note is not found"
+         })
+       }
+
+      await Note.deleteOne({ _id: noteId ,userId: user._id})
+      res.json({
+        error : false,
+        message : "Note deleted successfully"
+      })
+
+     }catch(error){
+          console.log(error)
+          res.status(500).json({
+            error : true,
+            message : "Internal server crash",
+            details : error.message
+          })
+     }
 })
 app.listen(3000)
 module.exports = app
