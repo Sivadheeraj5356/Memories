@@ -2,7 +2,8 @@ import React, { useState } from 'react'
 import ProfileInfo from '../Cards/ProfileInfo'
 import { useNavigate } from 'react-router-dom'
 import SearchBar from '../SearchBar/SearchBar'
-const Navbar = () => {
+const Navbar = ({ userInfo }) => {
+  console.log(userInfo)
   const [search , setSearch] = useState("")
   const navigate = useNavigate()
   const handleSearch = ()=>{
@@ -12,6 +13,7 @@ const Navbar = () => {
     setSearch("")
   }
   const LogOut = ()=>{
+    localStorage.clear()
     navigate('/login');
   }
   return (
@@ -27,7 +29,7 @@ const Navbar = () => {
          setSearch(e.target.value)
         }}
         ></SearchBar>
-     <ProfileInfo LogOut={LogOut}></ProfileInfo>
+     <ProfileInfo userInfo={userInfo} LogOut={LogOut}></ProfileInfo>
     </div>
 )
 }

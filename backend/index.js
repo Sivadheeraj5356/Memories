@@ -57,13 +57,13 @@ app.post('/create-account', async(req,res)=>{
     })
     await user.save()
 
-    const accesstoken = jwt.sign({user} , process.env.ACCESS_TOKEN_SECRET,{
+    const accessToken = jwt.sign({user} , process.env.ACCESS_TOKEN_SECRET,{
         expiresIn :"3600m"
     })
     return res.json({
         error : false,
         user,
-        accesstoken,
+        accessToken,
         message : "Registration successful"
     })
 })
@@ -97,12 +97,12 @@ app.post('/login', async(req,res)=>{
     }
 if(userInfo.email == email && userInfo.password === password){
     const user = { user : userInfo}
-    const accesstoken = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET,{
+    const accessToken = jwt.sign(user , process.env.ACCESS_TOKEN_SECRET,{
         expiresIn :"3600m"
     })
     return res.json({
         user,
-        accesstoken,
+        accessToken,
         error : false,
         message : "Login Successful"
     })
@@ -114,93 +114,100 @@ if(userInfo.email == email && userInfo.password === password){
 }
 
 })
-app.post('/add-note',authenticationToken, async (req, res)=>{
-  const { title, content , tags } = req.body
+app.post('/add-note', authenticationToken, async (req, res) => {
+  const { title, content, tags } = req.body
   const user = req.user.user
 
-  if(!title){
+  if (!title) {
     return res.status(400).json({
-        error : true,
-        message  : "Enter Title"
+      error: true,
+      message: "Enter Title"
     })
   }
-  if(!content){
+  if (!content) {
     return res.status(400).json({
-        error : true,
-        message  : "Enter Content"
+      error: true,
+      message: "Enter Content"
     })
-  } 
-  try{
+  }
+  try {
+    // Ensure tags is an array of strings
+    const processedTags = Array.isArray(tags) 
+      ? tags.map(tag => tag.trim()).filter(tag => tag !== '')
+      : [];
+
     const note = new Note({
-        title,
-        content,
-        tags : tags || [],
-        userId : user._id,
+      title,
+      content,
+      tags: processedTags,
+      userId: user._id,
     })
 
     await note.save()
     return res.json({
-        error : false,
-        note,
-        message : " Note created successfully"
+      error: false,
+      note,
+      message: "Note created successfully"
     })
-  }catch (error){
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({
-        error: true ,
-        message : "Internal Server Crash"
+      error: true,
+      message: "Internal Server Error"
+    })
+  }
+})
+
+app.put('/edit-note/:noteId', authenticationToken, async (req, res) => {
+  const noteId = req.params.noteId
+  const { title, content, tags, isPinned } = req.body
+  const user = req.user.user
+
+  if (!title && !content && tags === undefined && isPinned === undefined) {
+    return res.status(400).json({
+      error: true,
+      message: "No changes provided"
     })
   }
 
-})
-
-app.put('/edit-note/:noteId', authenticationToken , async(req,res)=>{
-    const noteId = req.params.noteId
-    const { title , content , tags , isPinned } = req.body
-    const user = req.user.user
-
-    if(!title && !content && tags === undefined && isPinned === undefined){
-        return res.status(400).json({
-            error : true,
-            message: "No changes provided"
-        })
+  try {
+    const note = await Note.findOne({ _id: noteId, userId: user._id })
+    if (!note) {
+      return res.status(404).json({
+        error: true,
+        message: "Note not found"
+      })
+    }
+    if (title !== undefined) {
+      note.title = title
+    }
+    if (content !== undefined) {
+      note.content = content
+    }
+    if (tags !== undefined) {
+      // Ensure tags is an array of strings
+      note.tags = Array.isArray(tags) 
+        ? tags.map(tag => tag.trim()).filter(tag => tag !== '')
+        : [];
+    }
+    if (isPinned !== undefined) {
+      note.isPinned = isPinned
     }
 
-    try{
-        const note = await Note.findOne({ _id: noteId , userId: user._id})
-        if(!note){
-            return res.status(404).json({
-                error : true,
-                message :" note is not present"
-            })
-        }
-        if(title !== undefined){
-            note.title = title 
-        }
-        if(content !== undefined){
-            note.content = content
-        }
-        if(tags !== undefined){
-            note.tags = tags 
-        }
-        if(isPinned !== undefined){
-            note.isPinned = isPinned
-        }
-
-        await note.save()
-        return res.json({
-            error : false,
-            note,
-            message :"note is successfully edited"
-        })
-    }catch(error){
-        console.log(error)
-        return res.status(500).json({
-            error :true,
-            message : "Internal server error",
-            details : error.message
-        })
-
-    }
+    await note.save()
+    return res.json({
+      error: false,
+      note,
+      message: "Note successfully edited"
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).json({
+      error: true,
+      message: "Internal server error",
+      details: error.message
+    })
+  }
 })
 
 app.get('/get-all-notes', authenticationToken , async (req, res)=>{
@@ -280,6 +287,22 @@ app.put('/update-note-pinned/:noteId' , authenticationToken , async(req, res)=>{
             details : error.message
         })
     }
+})
+
+app.get('/get-user', authenticationToken, async(req,res)=>{
+    const user = req.user.user
+    const isUser = await User.findOne({ _id : user._id})
+    if(!isUser){
+        return res.status(400).json({
+            error : true,
+            message : "user not found"
+        })
+    }
+    return res.json({
+        error: false,
+        user,
+        message: ""
+    })
 })
 app.listen(3000)
 module.exports = app

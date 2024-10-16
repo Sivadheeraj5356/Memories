@@ -7,12 +7,12 @@ function authenticationToken(req,res,next){
         res.sendStatus(401)
         return
     }
-    jwt.verify(token , process.env.ACCESS_TOKEN_SECRET,(err,user)=>{
+    jwt.verify(token , process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
         if(err){
             res.sendStatus(401)
             return
         }
-        req.user = user
+        req.user = decoded
         next()
     })
 }
